@@ -1,0 +1,16 @@
+{
+  "gui.auto-trade-filtering.filter": "Filter",
+  "gui.auto-trade-filtering.title": "Select Target Trade",
+  "gui.auto-trade-filtering.max_attempts": "Max Attempts:",
+  "gui.auto-trade-filtering.start": "Start",
+  "gui.auto-trade-filtering.cancel": "Cancel",
+
+  "msg.auto-trade-filtering.success_title": "Success",
+  "msg.auto-trade-filtering.success": "Found target trade after %s attempt(s)",
+  "msg.auto-trade-filtering.fail_title": "Failed",
+  "msg.auto-trade-filtering.fail_entity_not_villager": "Target is not a villager",
+  "msg.auto-trade-filtering.fail_too_far": "Too far from villager",
+  "msg.auto-trade-filtering.fail_no_profession": "Villager has no profession",
+  "msg.auto-trade-filtering.fail_profession_locked": "Villager profession is locked (already traded)",
+  "msg.auto-trade-filtering.fail_max_attempts": "Tried %s times, target trade not found"
+}

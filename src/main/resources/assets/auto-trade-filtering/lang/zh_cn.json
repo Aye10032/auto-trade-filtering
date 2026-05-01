@@ -1,0 +1,16 @@
+{
+  "gui.auto-trade-filtering.filter": "筛选",
+  "gui.auto-trade-filtering.title": "选择目标交易",
+  "gui.auto-trade-filtering.max_attempts": "最大次数:",
+  "gui.auto-trade-filtering.start": "开始刷新",
+  "gui.auto-trade-filtering.cancel": "取消",
+
+  "msg.auto-trade-filtering.success_title": "刷新成功",
+  "msg.auto-trade-filtering.success": "已在第 %s 次刷出目标交易",
+  "msg.auto-trade-filtering.fail_title": "刷新失败",
+  "msg.auto-trade-filtering.fail_entity_not_villager": "目标不是村民",
+  "msg.auto-trade-filtering.fail_too_far": "距离村民过远",
+  "msg.auto-trade-filtering.fail_no_profession": "村民没有职业",
+  "msg.auto-trade-filtering.fail_profession_locked": "村民职业已锁定（已发生交易）",
+  "msg.auto-trade-filtering.fail_max_attempts": "已尝试 %s 次，未找到目标交易"
+}

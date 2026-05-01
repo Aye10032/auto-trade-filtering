@@ -16,6 +16,7 @@ import net.minecraft.world.item.trading.MerchantOffers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
 import java.util.UUID;
 
 public class TradeRefreshHandler {
@@ -36,67 +37,79 @@ public class TradeRefreshHandler {
 
         double distSq = player.distanceToSqr(villager);
         if (distSq > MAX_DISTANCE_SQ) {
-            LOGGER.warn("[ATF] 玩家 {} 距离村民过远 ({} 格²)，拒绝刷新", player.getName().getString(), (int) distSq);
+            LOGGER.warn("[ATF] 玩家 {} 距离村民过远，拒绝刷新", player.getName().getString());
             sendResult(player, false, 0, "too_far");
             return;
         }
 
         if (villager.getVillagerData().profession().unwrapKey().isEmpty()) {
-            LOGGER.warn("[ATF] 村民没有职业，无法刷新交易");
+            LOGGER.warn("[ATF] 村民没有职业，无法刷新");
             sendResult(player, false, 0, "no_profession");
             return;
         }
 
         if (isProfessionLocked(villager)) {
-            LOGGER.warn("[ATF] 村民职业已锁定（已发生交易），无法刷新");
+            LOGGER.warn("[ATF] 村民职业已锁定（已发生交易）");
             sendResult(player, false, 0, "profession_locked");
             return;
         }
 
+        List<TradeFilter.TradeTarget> targets = filter.targets();
+        if (targets.isEmpty()) {
+            sendResult(player, false, 0, "no_target");
+            return;
+        }
+
         int limit = Math.min(maxAttempts, MAX_ATTEMPTS_LIMIT);
-        LOGGER.info("[ATF] 开始为玩家 {} 刷新村民交易，目标物品={}，最多尝试 {} 次",
-                player.getName().getString(), filter.itemId(), limit);
+        LOGGER.info("[ATF] 开始为玩家 {} 刷新，目标 {} 个，最多 {} 次",
+                player.getName().getString(), targets.size(), limit);
 
         for (int i = 1; i <= limit; i++) {
             villager.setOffers(new MerchantOffers());
             villager.updateTrades(level);
 
             MerchantOffers offers = villager.getOffers();
-            LOGGER.debug("[ATF] 第 {} 次刷新，共生成 {} 条交易", i, offers.size());
+            LOGGER.debug("[ATF] 第 {} 次刷新，生成 {} 条交易", i, offers.size());
 
-            for (MerchantOffer offer : offers) {
-                if (matchesFilter(offer.getResult(), filter)) {
-                    LOGGER.info("[ATF] 第 {} 次刷新命中目标交易！", i);
-                    sendResult(player, true, i, "success");
-                    return;
-                }
+            if (allTargetsMatched(offers, targets)) {
+                LOGGER.info("[ATF] 第 {} 次刷新命中所有目标！", i);
+                sendResult(player, true, i, "success");
+                return;
             }
         }
 
-        LOGGER.info("[ATF] 已达最大尝试次数 {}，未找到目标交易", limit);
+        LOGGER.info("[ATF] 已达最大尝试次数 {}，未找到目标", limit);
         sendResult(player, false, limit, "max_attempts");
     }
 
-    private static boolean matchesFilter(ItemStack result, TradeFilter filter) {
-        String resultItemId = BuiltInRegistries.ITEM.getKey(result.getItem()).toString();
-        if (!resultItemId.equals(filter.itemId())) {
-            return false;
+    /** 检查本次刷新的交易列表是否包含所有目标（每个目标至少有一条交易命中） */
+    private static boolean allTargetsMatched(MerchantOffers offers, List<TradeFilter.TradeTarget> targets) {
+        for (TradeFilter.TradeTarget target : targets) {
+            boolean targetFound = false;
+            for (MerchantOffer offer : offers) {
+                if (matchesTarget(offer.getResult(), target)) {
+                    targetFound = true;
+                    break;
+                }
+            }
+            if (!targetFound) return false;
         }
+        return true;
+    }
 
-        if (!filter.hasEnchantmentFilter()) {
-            return true;
-        }
+    private static boolean matchesTarget(ItemStack result, TradeFilter.TradeTarget target) {
+        String resultItemId = BuiltInRegistries.ITEM.getKey(result.getItem()).toString();
+        if (!resultItemId.equals(target.itemId())) return false;
+
+        if (!target.hasEnchantmentFilter()) return true;
 
         ItemEnchantments enchantments = EnchantmentHelper.getEnchantmentsForCrafting(result);
         for (var entry : enchantments.entrySet()) {
             String enchId = entry.getKey().unwrapKey()
                     .map(k -> k.identifier().toString())
                     .orElse("");
-            if (enchId.equals(filter.enchantmentId())) {
-                if (filter.enchantLevel() == 0 || entry.getIntValue() == filter.enchantLevel()) {
-                    LOGGER.debug("[ATF]   附魔匹配：{} level {}", enchId, entry.getIntValue());
-                    return true;
-                }
+            if (enchId.equals(target.enchantmentId())) {
+                return target.enchantLevel() == 0 || entry.getIntValue() == target.enchantLevel();
             }
         }
         return false;
