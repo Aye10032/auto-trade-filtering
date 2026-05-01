@@ -13,7 +13,18 @@
       "Bash(./gradlew compileJava --info)",
       "Bash(javap -p net/minecraft/server/level/ServerPlayer.class)",
       "Bash(./gradlew compileJava)",
-      "Bash(./gradlew compileClientJava)"
+      "Bash(./gradlew compileClientJava)",
+      "Bash(./gradlew compileJava compileClientJava)",
+      "Bash(javap -p -classpath \"/d/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft/minecraft-common-deobf/26.1.2/minecraft-common-deobf-26.1.2.jar\" net.minecraft.resources.ResourceKey)",
+      "Bash(javap -p -classpath \"/d/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft/minecraft-common-deobf/26.1.2/minecraft-common-deobf-26.1.2.jar\" net.minecraft.network.codec.ByteBufCodecs)",
+      "Bash(javap -p -classpath \"/d/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft/minecraft-common-deobf/26.1.2/minecraft-common-deobf-26.1.2.jar\" net.minecraft.core.UUIDUtil)",
+      "Bash(javap -p -classpath \"/d/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft/minecraft-common-deobf/26.1.2/minecraft-common-deobf-26.1.2.jar\" net.minecraft.resources.Identifier)",
+      "Bash(javap -p -classpath \"/d/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft/minecraft-common-deobf/26.1.2/minecraft-common-deobf-26.1.2.jar\" net.minecraft.core.registries.BuiltInRegistries)",
+      "Bash(javap -p -classpath \"/d/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft/minecraft-common-deobf/26.1.2/minecraft-common-deobf-26.1.2.jar\" net.minecraft.client.Minecraft)",
+      "Bash(xargs -I{} jar tf {})",
+      "Bash(javap -p -classpath \"/d/.gradle/caches/fabric-loom/26.1.2/minecraft-client-only.jar\" net.minecraft.client.Minecraft)",
+      "Bash(javap -p -classpath \"/d/.gradle/caches/fabric-loom/26.1.2/minecraft-client-only.jar\" net.minecraft.client.gui.components.toasts.SystemToast)",
+      "Bash(javap -p -classpath /d/.gradle/caches/fabric-loom/26.1.2/minecraft-client-only.jar 'net.minecraft.client.gui.components.toasts.SystemToast$SystemToastId')"
     ]
   }
 }

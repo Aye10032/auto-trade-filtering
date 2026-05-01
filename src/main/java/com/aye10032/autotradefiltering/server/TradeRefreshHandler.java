@@ -1,9 +1,16 @@
 package com.aye10032.autotradefiltering.server;
 
+import com.aye10032.autotradefiltering.network.RefreshResultPayload;
+import com.aye10032.autotradefiltering.network.TradeFilter;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.npc.villager.Villager;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.item.enchantment.ItemEnchantments;
 import net.minecraft.world.item.trading.MerchantOffer;
 import net.minecraft.world.item.trading.MerchantOffers;
 import org.slf4j.Logger;
@@ -15,63 +22,88 @@ public class TradeRefreshHandler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger("AutoTradeFiltering");
     private static final int MAX_ATTEMPTS_LIMIT = 200;
-    private static final double MAX_DISTANCE_SQ = 64.0; // 8格
+    private static final double MAX_DISTANCE_SQ = 64.0;
 
-    /**
-     * 临时调试入口：不需要网络包，直接在主模块初始化时可调用测试。
-     * 正式版将由网络包接收器调用。
-     */
-    public static void handle(ServerPlayer player, UUID villagerUuid, int maxAttempts) {
+    public static void handle(ServerPlayer player, UUID villagerUuid, TradeFilter filter, int maxAttempts) {
         ServerLevel level = (ServerLevel) player.level();
         Entity entity = level.getEntity(villagerUuid);
 
         if (!(entity instanceof Villager villager)) {
             LOGGER.warn("[ATF] UUID {} 对应的实体不是村民", villagerUuid);
+            sendResult(player, false, 0, "entity_not_villager");
             return;
         }
 
-        // 距离检查（防止跨图作弊）
         double distSq = player.distanceToSqr(villager);
         if (distSq > MAX_DISTANCE_SQ) {
             LOGGER.warn("[ATF] 玩家 {} 距离村民过远 ({} 格²)，拒绝刷新", player.getName().getString(), (int) distSq);
+            sendResult(player, false, 0, "too_far");
             return;
         }
 
-        // 职业检查
         if (villager.getVillagerData().profession().unwrapKey().isEmpty()) {
             LOGGER.warn("[ATF] 村民没有职业，无法刷新交易");
+            sendResult(player, false, 0, "no_profession");
             return;
         }
 
-        // 职业锁定检查：任意交易已被使用过则职业已锁定
         if (isProfessionLocked(villager)) {
             LOGGER.warn("[ATF] 村民职业已锁定（已发生交易），无法刷新");
+            sendResult(player, false, 0, "profession_locked");
             return;
         }
 
         int limit = Math.min(maxAttempts, MAX_ATTEMPTS_LIMIT);
-        LOGGER.info("[ATF] 开始为玩家 {} 刷新村民交易，最多尝试 {} 次", player.getName().getString(), limit);
+        LOGGER.info("[ATF] 开始为玩家 {} 刷新村民交易，目标物品={}，最多尝试 {} 次",
+                player.getName().getString(), filter.itemId(), limit);
 
         for (int i = 1; i <= limit; i++) {
-            // 重置交易列表并重新生成
             villager.setOffers(new MerchantOffers());
-            villager.updateTrades(level); // Access Widener 暴露的 protected 方法
+            villager.updateTrades(level);
 
             MerchantOffers offers = villager.getOffers();
             LOGGER.debug("[ATF] 第 {} 次刷新，共生成 {} 条交易", i, offers.size());
 
-            // TODO: 此处替换为实际 filter 匹配逻辑（网络包实现后）
-            // 临时：打印所有交易的输出物，方便调试
             for (MerchantOffer offer : offers) {
-                LOGGER.debug("[ATF]   -> {}", offer.getResult().getItem());
+                if (matchesFilter(offer.getResult(), filter)) {
+                    LOGGER.info("[ATF] 第 {} 次刷新命中目标交易！", i);
+                    sendResult(player, true, i, "success");
+                    return;
+                }
             }
-
-            // 临时：始终在第一次刷新后停止，避免无限循环
-            LOGGER.info("[ATF] 调试模式：仅执行 1 次刷新（等待筛选逻辑接入）");
-            return;
         }
 
         LOGGER.info("[ATF] 已达最大尝试次数 {}，未找到目标交易", limit);
+        sendResult(player, false, limit, "max_attempts");
+    }
+
+    private static boolean matchesFilter(ItemStack result, TradeFilter filter) {
+        String resultItemId = BuiltInRegistries.ITEM.getKey(result.getItem()).toString();
+        if (!resultItemId.equals(filter.itemId())) {
+            return false;
+        }
+
+        if (!filter.hasEnchantmentFilter()) {
+            return true;
+        }
+
+        ItemEnchantments enchantments = EnchantmentHelper.getEnchantmentsForCrafting(result);
+        for (var entry : enchantments.entrySet()) {
+            String enchId = entry.getKey().unwrapKey()
+                    .map(k -> k.identifier().toString())
+                    .orElse("");
+            if (enchId.equals(filter.enchantmentId())) {
+                if (filter.enchantLevel() == 0 || entry.getIntValue() == filter.enchantLevel()) {
+                    LOGGER.debug("[ATF]   附魔匹配：{} level {}", enchId, entry.getIntValue());
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static void sendResult(ServerPlayer player, boolean success, int attempts, String message) {
+        ServerPlayNetworking.send(player, new RefreshResultPayload(success, attempts, message));
     }
 
     private static boolean isProfessionLocked(Villager villager) {
