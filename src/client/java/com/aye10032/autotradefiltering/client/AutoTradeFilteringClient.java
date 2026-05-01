@@ -7,6 +7,7 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.toasts.SystemToast;
 import net.minecraft.network.chat.Component;
+import net.minecraft.sounds.SoundEvents;
 
 public class AutoTradeFilteringClient implements ClientModInitializer {
 
@@ -27,6 +28,9 @@ public class AutoTradeFilteringClient implements ClientModInitializer {
 		if (payload.success()) {
 			title = Component.translatable("msg.auto-trade-filtering.success_title");
 			desc = Component.translatable("msg.auto-trade-filtering.success", payload.attempts());
+			if (mc.player != null) {
+				mc.player.playSound(SoundEvents.PLAYER_LEVELUP, 1.0F, 1.0F);
+			}
 		} else {
 			title = Component.translatable("msg.auto-trade-filtering.fail_title");
 			desc = Component.translatable("msg.auto-trade-filtering.fail_" + payload.message(), payload.attempts());
