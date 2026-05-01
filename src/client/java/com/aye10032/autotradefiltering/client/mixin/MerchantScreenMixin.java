@@ -6,10 +6,13 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.MerchantScreen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.npc.villager.Villager;
+import net.minecraft.world.entity.npc.villager.VillagerProfession;
 import net.minecraft.world.inventory.MerchantMenu;
-import net.minecraft.world.item.trading.Merchant;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -26,17 +29,32 @@ public abstract class MerchantScreenMixin extends Screen {
         MerchantScreen self = (MerchantScreen) (Object) this;
         MerchantMenu menu = self.getMenu();
 
-        // 仅对真实村民显示（UUID 需在右键时由 MultiPlayerGameModeMixin 捕获）
+        // 仅对真实村民显示
         if (TradeFilterScreen.lastInteractedVillagerUUID == null) return;
+        ResourceKey<VillagerProfession> profession = getLastInteractedVillagerProfession();
+        if (profession == null) return;
 
-        // 按钮放在屏幕右上角，交易界面标题旁
-        int btnX = (width - 176) / 2 + 178;
-        int btnY = (height - 166) / 2;
+        int btnX = (width - 276) / 2 + 110;
+        int btnY = (height - 166) / 2 + 25;
 
         addRenderableWidget(Button.builder(
-                Component.translatable("gui.auto-trade-filtering.filter"),
-                btn -> Minecraft.getInstance().setScreen(new TradeFilterScreen(menu, self)))
-                .bounds(btnX, btnY, 60, 14)
+                Component.literal("F"),
+                btn -> Minecraft.getInstance().setScreen(new TradeFilterScreen(menu, self, profession)))
+                .bounds(btnX, btnY, 15, 15)
                 .build());
+    }
+
+    @Unique
+    private ResourceKey<VillagerProfession> getLastInteractedVillagerProfession() {
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft.level == null) return null;
+
+        for (Entity entity : minecraft.level.entitiesForRendering()) {
+            if (entity instanceof Villager villager
+                    && villager.getUUID().equals(TradeFilterScreen.lastInteractedVillagerUUID)) {
+                return villager.getVillagerData().profession().unwrapKey().orElse(null);
+            }
+        }
+        return null;
     }
 }

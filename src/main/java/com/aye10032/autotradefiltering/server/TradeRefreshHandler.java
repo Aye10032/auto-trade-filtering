@@ -7,6 +7,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.npc.villager.VillagerData;
 import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
@@ -65,14 +66,13 @@ public class TradeRefreshHandler {
                 player.getName().getString(), targets.size(), limit);
 
         for (int i = 1; i <= limit; i++) {
-            villager.setOffers(new MerchantOffers());
-            villager.updateTrades(level);
+            FullCareerRoll roll = buildFullCareerRoll(level, villager);
+            LOGGER.debug("[ATF] 第 {} 次刷新，当前等级 {} 条，完整职业池 {} 条",
+                    i, roll.visibleOffers().size(), roll.fullCareerOffers().size());
 
-            MerchantOffers offers = villager.getOffers();
-            LOGGER.debug("[ATF] 第 {} 次刷新，生成 {} 条交易", i, offers.size());
-
-            if (allTargetsMatched(offers, targets)) {
-                LOGGER.info("[ATF] 第 {} 次刷新命中所有目标！", i);
+            villager.setOffers(roll.visibleOffers());
+            if (allTargetsMatched(roll.fullCareerOffers(), targets)) {
+                LOGGER.info("[ATF] 第 {} 次刷新命中所有目标！当前等级 {} 条，完整职业池 {} 条", i, roll.visibleOffers().size(), roll.fullCareerOffers().size());
                 sendResult(player, true, i, "success");
                 return;
             }
@@ -82,7 +82,9 @@ public class TradeRefreshHandler {
         sendResult(player, false, limit, "max_attempts");
     }
 
-    /** 检查本次刷新的交易列表是否包含所有目标（每个目标至少有一条交易命中） */
+    /**
+     * 检查本次刷新的交易列表是否包含所有目标（每个目标至少有一条交易命中）
+     */
     private static boolean allTargetsMatched(MerchantOffers offers, List<TradeFilter.TradeTarget> targets) {
         for (TradeFilter.TradeTarget target : targets) {
             boolean targetFound = false;
@@ -119,6 +121,26 @@ public class TradeRefreshHandler {
         ServerPlayNetworking.send(player, new RefreshResultPayload(success, attempts, message));
     }
 
+    private static FullCareerRoll buildFullCareerRoll(ServerLevel level, Villager villager) {
+        VillagerData originalData = villager.getVillagerData();
+        int currentLevel = originalData.level();
+        MerchantOffers visibleOffers = new MerchantOffers();
+
+        villager.setOffers(new MerchantOffers());
+
+        for (int tradeLevel = VillagerData.MIN_VILLAGER_LEVEL; tradeLevel <= VillagerData.MAX_VILLAGER_LEVEL; tradeLevel++) {
+            villager.setVillagerData(originalData.withLevel(tradeLevel));
+            villager.updateTrades(level);
+            if (tradeLevel == currentLevel) {
+                visibleOffers = villager.getOffers().copy();
+            }
+        }
+
+        MerchantOffers fullOffers = villager.getOffers().copy();
+        villager.setVillagerData(originalData);
+        return new FullCareerRoll(visibleOffers, fullOffers);
+    }
+
     private static boolean isProfessionLocked(Villager villager) {
         MerchantOffers offers = villager.getOffers();
         if (offers == null || offers.isEmpty()) return false;
@@ -126,5 +148,8 @@ public class TradeRefreshHandler {
             if (offer.getUses() > 0) return true;
         }
         return false;
+    }
+
+    private record FullCareerRoll(MerchantOffers visibleOffers, MerchantOffers fullCareerOffers) {
     }
 }
