@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(jar tf *)",
+      "Bash(javap -p \"D:/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft/minecraft-common-deobf/26.1.2/minecraft-common-deobf-26.1.2.jar!/net/minecraft/world/entity/npc/villager/Villager.class\")",
+      "Bash(cd /tmp)",
+      "Bash(jar xf *)",
+      "Bash(javap -p net/minecraft/world/entity/npc/villager/AbstractVillager.class)",
+      "Bash(javap -p net/minecraft/world/entity/npc/villager/Villager.class)",
+      "Bash(javap -p net/minecraft/world/entity/npc/villager/VillagerDataHolder.class)",
+      "Bash(javap -p net/minecraft/world/item/trading/MerchantOffer.class)",
+      "Bash(./gradlew compileJava compileClientJava --info)",
+      "Bash(./gradlew compileJava --info)",
+      "Bash(javap -p net/minecraft/server/level/ServerPlayer.class)",
+      "Bash(./gradlew compileJava)",
+      "Bash(./gradlew compileClientJava)"
+    ]
+  }
+}

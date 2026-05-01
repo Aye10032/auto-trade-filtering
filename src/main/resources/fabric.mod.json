@@ -13,6 +13,7 @@
 	},
 	"license": "CC0-1.0",
 	"icon": "assets/auto-trade-filtering/icon.png",
+	"accessWidener": "auto-trade-filtering.accesswidener",
 	"environment": "*",
 	"entrypoints": {
 		"main": [
