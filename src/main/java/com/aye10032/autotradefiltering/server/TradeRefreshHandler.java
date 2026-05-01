@@ -21,7 +21,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public class TradeRefreshHandler {
@@ -29,6 +31,7 @@ public class TradeRefreshHandler {
     private static final Logger LOGGER = LoggerFactory.getLogger("AutoTradeFiltering");
     private static final int MAX_ATTEMPTS_LIMIT = 10_000;
     private static final double MAX_DISTANCE_SQ = 64.0;
+    private static final String ENCHANTED_BOOK_ID = "minecraft:enchanted_book";
 
     public static void handle(ServerPlayer player, UUID villagerUuid, TradeFilter filter, int maxAttempts) {
         ServerLevel level = (ServerLevel) player.level();
@@ -95,7 +98,26 @@ public class TradeRefreshHandler {
      * 检查本次刷新的交易列表是否包含所有目标（每个目标至少有一条交易命中）
      */
     private static boolean allTargetsMatched(MerchantOffers offers, List<TradeFilter.TradeTarget> targets) {
+        Map<String, List<TradeFilter.TradeTarget>> equipmentEnchantTargets = new LinkedHashMap<>();
+        List<TradeFilter.TradeTarget> independentTargets = new ArrayList<>();
+
         for (TradeFilter.TradeTarget target : targets) {
+            if (isEquipmentEnchantmentTarget(target)) {
+                equipmentEnchantTargets.computeIfAbsent(target.itemId(), ignored -> new ArrayList<>()).add(target);
+            } else {
+                independentTargets.add(target);
+            }
+        }
+
+        for (List<TradeFilter.TradeTarget> sameItemTargets : equipmentEnchantTargets.values()) {
+            if (sameItemTargets.size() == 1) {
+                independentTargets.add(sameItemTargets.getFirst());
+            } else if (!hasSingleOfferMatchingAllTargets(offers, sameItemTargets)) {
+                return false;
+            }
+        }
+
+        for (TradeFilter.TradeTarget target : independentTargets) {
             boolean targetFound = false;
             for (MerchantOffer offer : offers) {
                 if (matchesTarget(offer.getResult(), target)) {
@@ -106,6 +128,25 @@ public class TradeRefreshHandler {
             if (!targetFound) return false;
         }
         return true;
+    }
+
+    private static boolean isEquipmentEnchantmentTarget(TradeFilter.TradeTarget target) {
+        return target.hasEnchantmentFilter() && !target.itemId().equals(ENCHANTED_BOOK_ID);
+    }
+
+    private static boolean hasSingleOfferMatchingAllTargets(MerchantOffers offers, List<TradeFilter.TradeTarget> targets) {
+        for (MerchantOffer offer : offers) {
+            ItemStack result = offer.getResult();
+            boolean allMatched = true;
+            for (TradeFilter.TradeTarget target : targets) {
+                if (!matchesTarget(result, target)) {
+                    allMatched = false;
+                    break;
+                }
+            }
+            if (allMatched) return true;
+        }
+        return false;
     }
 
     private static boolean matchesTarget(ItemStack result, TradeFilter.TradeTarget target) {
