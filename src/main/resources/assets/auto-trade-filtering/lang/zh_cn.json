@@ -13,5 +13,10 @@
   "msg.auto-trade-filtering.fail_too_far": "距离村民过远",
   "msg.auto-trade-filtering.fail_no_profession": "村民没有职业",
   "msg.auto-trade-filtering.fail_profession_locked": "村民职业已锁定（已发生交易）",
-  "msg.auto-trade-filtering.fail_max_attempts": "已尝试 %s 次，未找到目标交易"
+  "msg.auto-trade-filtering.fail_max_attempts": "已尝试 %s 次，未找到目标交易",
+
+  "overlay.auto-trade-filtering.librarian_books": "附魔书交易",
+  "overlay.auto-trade-filtering.loading": "正在读取交易...",
+  "overlay.auto-trade-filtering.no_books": "没有附魔书交易",
+  "overlay.auto-trade-filtering.more": "还有 %s 项"
 }

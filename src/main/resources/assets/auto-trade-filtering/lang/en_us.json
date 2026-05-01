@@ -13,5 +13,10 @@
   "msg.auto-trade-filtering.fail_too_far": "Too far from villager",
   "msg.auto-trade-filtering.fail_no_profession": "Villager has no profession",
   "msg.auto-trade-filtering.fail_profession_locked": "Villager profession is locked (already traded)",
-  "msg.auto-trade-filtering.fail_max_attempts": "Tried %s times, target trade not found"
+  "msg.auto-trade-filtering.fail_max_attempts": "Tried %s times, target trade not found",
+
+  "overlay.auto-trade-filtering.librarian_books": "Enchanted Books",
+  "overlay.auto-trade-filtering.loading": "Loading trades...",
+  "overlay.auto-trade-filtering.no_books": "No enchanted book trades",
+  "overlay.auto-trade-filtering.more": "+%s more"
 }

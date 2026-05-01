@@ -3,6 +3,8 @@
 	"package": "com.aye10032.autotradefiltering.client.mixin",
 	"compatibilityLevel": "JAVA_25",
 	"client": [
+		"LevelRendererMixin",
+		"MinecraftMixin",
 		"MerchantScreenMixin",
 		"MultiPlayerGameModeMixin"
 	],
