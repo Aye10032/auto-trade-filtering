@@ -39,6 +39,7 @@ public class TradeFilterScreen extends Screen {
     private static final int TARGET_BTN_GAP = 2;
     private static final int MAX_VISIBLE_TARGETS = 7;
     private static final int MAX_SELECTIONS = 2;
+    private static final int MAX_ATTEMPTS_LIMIT = 10_000;
     private static final int LIST_TOP_OFFSET = 38;
     private static final int SCROLLBAR_W = 6;
 
@@ -85,8 +86,8 @@ public class TradeFilterScreen extends Screen {
         maxAttemptsBox = addRenderableWidget(new EditBox(
                 font, left + (PANEL_W - 54) / 2, inputY, 54, 16,
                 Component.translatable("gui.auto-trade-filtering.max_attempts")));
-        maxAttemptsBox.setValue("100");
-        maxAttemptsBox.setMaxLength(3);
+        maxAttemptsBox.setValue("1000");
+        maxAttemptsBox.setMaxLength(5);
 
         startButton = addRenderableWidget(Button.builder(
                 Component.translatable("gui.auto-trade-filtering.start"),
@@ -209,7 +210,7 @@ public class TradeFilterScreen extends Screen {
 
         int maxAttempts = 100;
         try { maxAttempts = Integer.parseInt(maxAttemptsBox.getValue()); } catch (NumberFormatException ignored) {}
-        maxAttempts = Math.max(1, Math.min(200, maxAttempts));
+        maxAttempts = Math.max(1, Math.min(MAX_ATTEMPTS_LIMIT, maxAttempts));
 
         List<TradeFilter.TradeTarget> selectedTargets = new ArrayList<>();
         for (int idx : selectedIndices) {

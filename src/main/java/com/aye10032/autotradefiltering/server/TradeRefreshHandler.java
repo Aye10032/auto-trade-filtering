@@ -4,26 +4,30 @@ import com.aye10032.autotradefiltering.network.RefreshResultPayload;
 import com.aye10032.autotradefiltering.network.TradeFilter;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.npc.villager.VillagerData;
 import net.minecraft.world.entity.npc.villager.Villager;
+import net.minecraft.world.entity.npc.villager.VillagerData;
+import net.minecraft.world.entity.npc.villager.VillagerProfession;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.item.enchantment.ItemEnchantments;
 import net.minecraft.world.item.trading.MerchantOffer;
 import net.minecraft.world.item.trading.MerchantOffers;
+import net.minecraft.world.item.trading.TradeSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 public class TradeRefreshHandler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger("AutoTradeFiltering");
-    private static final int MAX_ATTEMPTS_LIMIT = 200;
+    private static final int MAX_ATTEMPTS_LIMIT = 10_000;
     private static final double MAX_DISTANCE_SQ = 64.0;
 
     public static void handle(ServerPlayer player, UUID villagerUuid, TradeFilter filter, int maxAttempts) {
@@ -61,23 +65,28 @@ public class TradeRefreshHandler {
             return;
         }
 
-        int limit = Math.min(maxAttempts, MAX_ATTEMPTS_LIMIT);
-        LOGGER.info("[ATF] 开始为玩家 {} 刷新，目标 {} 个，最多 {} 次",
-                player.getName().getString(), targets.size(), limit);
+        int limit = Math.max(1, Math.min(maxAttempts, MAX_ATTEMPTS_LIMIT));
+        LOGGER.info("[ATF] 开始为玩家 {} 刷新，目标 {} 个，请求 {} 次，实际最多 {} 次",
+                player.getName().getString(), targets.size(), maxAttempts, limit);
 
+        ((FilteredVillager) villager).atf$setFutureTradeData(null);
         for (int i = 1; i <= limit; i++) {
             FullCareerRoll roll = buildFullCareerRoll(level, villager);
             LOGGER.debug("[ATF] 第 {} 次刷新，当前等级 {} 条，完整职业池 {} 条",
                     i, roll.visibleOffers().size(), roll.fullCareerOffers().size());
 
-            villager.setOffers(roll.visibleOffers());
             if (allTargetsMatched(roll.fullCareerOffers(), targets)) {
                 LOGGER.info("[ATF] 第 {} 次刷新命中所有目标！当前等级 {} 条，完整职业池 {} 条", i, roll.visibleOffers().size(), roll.fullCareerOffers().size());
+                villager.setOffers(roll.visibleOffers());
+                ((FilteredVillager) villager).atf$setFutureTradeData(new FutureTradeData(roll.futureOffers()));
                 sendResult(player, true, i, "success");
                 return;
             }
+
+            villager.setOffers(roll.visibleOffers());
         }
 
+        ((FilteredVillager) villager).atf$setFutureTradeData(null);
         LOGGER.info("[ATF] 已达最大尝试次数 {}，未找到目标", limit);
         sendResult(player, false, limit, "max_attempts");
     }
@@ -124,21 +133,28 @@ public class TradeRefreshHandler {
     private static FullCareerRoll buildFullCareerRoll(ServerLevel level, Villager villager) {
         VillagerData originalData = villager.getVillagerData();
         int currentLevel = originalData.level();
-        MerchantOffers visibleOffers = new MerchantOffers();
+        VillagerProfession profession = originalData.profession().value();
+        MerchantOffers visibleOffers = generateOffersForLevel(level, villager, profession, currentLevel);
+        List<MerchantOffers> futureOffers = new ArrayList<>();
 
-        villager.setOffers(new MerchantOffers());
-
-        for (int tradeLevel = VillagerData.MIN_VILLAGER_LEVEL; tradeLevel <= VillagerData.MAX_VILLAGER_LEVEL; tradeLevel++) {
-            villager.setVillagerData(originalData.withLevel(tradeLevel));
-            villager.updateTrades(level);
-            if (tradeLevel == currentLevel) {
-                visibleOffers = villager.getOffers().copy();
-            }
+        for (int tradeLevel = currentLevel + 1; tradeLevel <= VillagerData.MAX_VILLAGER_LEVEL; tradeLevel++) {
+            futureOffers.add(generateOffersForLevel(level, villager, profession, tradeLevel));
         }
 
-        MerchantOffers fullOffers = villager.getOffers().copy();
-        villager.setVillagerData(originalData);
-        return new FullCareerRoll(visibleOffers, fullOffers);
+        MerchantOffers fullOffers = visibleOffers.copy();
+        for (MerchantOffers offers : futureOffers) {
+            fullOffers.addAll(offers);
+        }
+        return new FullCareerRoll(visibleOffers, futureOffers, fullOffers);
+    }
+
+    private static MerchantOffers generateOffersForLevel(ServerLevel level, Villager villager, VillagerProfession profession, int tradeLevel) {
+        MerchantOffers offers = new MerchantOffers();
+        ResourceKey<TradeSet> tradeSet = profession.getTrades(tradeLevel);
+        if (tradeSet != null) {
+            villager.addOffersFromTradeSet(level, offers, tradeSet);
+        }
+        return offers;
     }
 
     private static boolean isProfessionLocked(Villager villager) {
@@ -150,6 +166,6 @@ public class TradeRefreshHandler {
         return false;
     }
 
-    private record FullCareerRoll(MerchantOffers visibleOffers, MerchantOffers fullCareerOffers) {
+    private record FullCareerRoll(MerchantOffers visibleOffers, List<MerchantOffers> futureOffers, MerchantOffers fullCareerOffers) {
     }
 }

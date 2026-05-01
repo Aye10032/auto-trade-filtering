@@ -6,5 +6,8 @@ accessible	field	net/minecraft/world/entity/npc/villager/AbstractVillager	offers
 # 暴露 Villager 的 updateTrades 方法，用于重新生成交易
 accessible	method	net/minecraft/world/entity/npc/villager/Villager	updateTrades	(Lnet/minecraft/server/level/ServerLevel;)V
 
+# 暴露 AbstractVillager 的按 TradeSet 生成交易方法，用于预生成并保存未来等级交易
+accessible	method	net/minecraft/world/entity/npc/villager/AbstractVillager	addOffersFromTradeSet	(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/item/trading/MerchantOffers;Lnet/minecraft/resources/ResourceKey;)V
+
 # 暴露 Villager.DATA_VILLAGER_DATA_FINALIZED，用于检测职业是否已锁定
 accessible	field	net/minecraft/world/entity/npc/villager/Villager	DATA_VILLAGER_DATA_FINALIZED	Lnet/minecraft/network/syncher/EntityDataAccessor;
