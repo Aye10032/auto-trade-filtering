@@ -1,15 +1,16 @@
 {
   "permissions": {
     "allow": [
-      "Bash(jar tf *)",
-      "Bash(javap -p *)",
-      "Bash(cd /tmp)",
-      "Bash(jar xf *)",
-      "Bash(./gradlew compileJava compileClientJava --info)",
-      "Bash(./gradlew compileJava --info)",
-      "Bash(./gradlew compileJava)",
-      "Bash(./gradlew compileClientJava)",
-      "Bash(./gradlew compileJava compileClientJava)",
+      "PowerShell(Get-ChildItem -Path \"$env:USERPROFILE\\\\.gradle\" -Directory -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name)",
+      "Read(//c/Users/tc_ay/**)",
+      "Read(//c/Users/tc_ay/.gradle/**)",
+      "Bash(unzip -p .gradle/loom-cache/minecraftMaven/net/minecraft/minecraft-common-8e68ccfc31/26.1.2/minecraft-common-8e68ccfc31-26.1.2.jar)",
+      "Bash(unzip -l .gradle/loom-cache/minecraftMaven/net/minecraft/minecraft-common-8e68ccfc31/26.1.2/minecraft-common-8e68ccfc31-26.1.2.jar)",
+      "Bash(mkdir -p /tmp/pot)",
+      "Read(//tmp/**)",
+      "Bash(unzip -o -q __TRACKED_VAR__/.gradle/loom-cache/minecraftMaven/net/minecraft/minecraft-common-8e68ccfc31/26.1.2/minecraft-common-8e68ccfc31-26.1.2.jar net/minecraft/world/item/alchemy/PotionContents.class net/minecraft/world/item/alchemy/Potion.class)",
+      "Bash(javap -p net/minecraft/world/item/alchemy/PotionContents.class)",
+      "Bash(javap -p net/minecraft/world/item/alchemy/Potion.class)"
     ]
   }
 }

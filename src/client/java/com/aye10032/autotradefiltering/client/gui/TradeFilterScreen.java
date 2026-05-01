@@ -19,6 +19,8 @@ import net.minecraft.world.inventory.MerchantMenu;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.alchemy.Potion;
+import net.minecraft.world.item.alchemy.PotionContents;
 import net.minecraft.world.item.enchantment.Enchantment;
 import org.jspecify.annotations.NonNull;
 
@@ -115,6 +117,9 @@ public class TradeFilterScreen extends Screen {
                     Items.DIAMOND_AXE, Items.DIAMOND_SHOVEL, Items.DIAMOND_PICKAXE));
         } else if (profession == VillagerProfession.WEAPONSMITH) {
             addEnchantedItemTargets(result, List.of(Items.DIAMOND_AXE, Items.DIAMOND_SWORD));
+        } else if (profession == VillagerProfession.FLETCHER) {
+            addEnchantedItemTargets(result, List.of(Items.BOW, Items.CROSSBOW));
+            addTippedArrowTargets(result);
         } else if (profession == VillagerProfession.MASON) {
             addColorBlockTargets(result, List.of(
                     Items.WHITE_TERRACOTTA, Items.ORANGE_TERRACOTTA, Items.MAGENTA_TERRACOTTA, Items.LIGHT_BLUE_TERRACOTTA,
@@ -165,9 +170,24 @@ public class TradeFilterScreen extends Screen {
     }
 
     private void addColorBlockTargets(List<TargetEntry> result, List<Item> items) {
+        addPlainItemTargets(result, items);
+    }
+
+    private void addPlainItemTargets(List<TargetEntry> result, List<Item> items) {
         for (Item item : items) {
             ItemStack stack = new ItemStack(item);
-            result.add(new TargetEntry(item, "", 0, stack.getHoverName().getString()));
+            result.add(new TargetEntry(item, "", 0, "", stack.getHoverName().getString()));
+        }
+    }
+
+    private void addTippedArrowTargets(List<TargetEntry> result) {
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft.level == null) return;
+        Registry<Potion> registry = minecraft.level.registryAccess().lookupOrThrow(Registries.POTION);
+        for (var entry : registry.entrySet()) {
+            String potionId = entry.getKey().identifier().toString();
+            ItemStack stack = PotionContents.createItemStack(Items.TIPPED_ARROW, registry.wrapAsHolder(entry.getValue()));
+            result.add(new TargetEntry(Items.TIPPED_ARROW, "", 0, potionId, stack.getHoverName().getString()));
         }
     }
 
@@ -216,7 +236,7 @@ public class TradeFilterScreen extends Screen {
         for (int idx : selectedIndices) {
             if (idx >= targets.size()) continue;
             TargetEntry target = targets.get(idx);
-            selectedTargets.add(new TradeFilter.TradeTarget(target.itemId(), target.enchantmentId(), target.enchantLevel()));
+            selectedTargets.add(new TradeFilter.TradeTarget(target.itemId(), target.enchantmentId(), target.enchantLevel(), target.potionId()));
         }
 
         if (selectedTargets.isEmpty()) return;
@@ -376,7 +396,11 @@ public class TradeFilterScreen extends Screen {
         return trackY + (trackH - thumbH) * scrollOffset / maxScrollOffset();
     }
 
-    private record TargetEntry(Item item, String enchantmentId, int enchantLevel, String label) {
+    private record TargetEntry(Item item, String enchantmentId, int enchantLevel, String potionId, String label) {
+        TargetEntry(Item item, String enchantmentId, int enchantLevel, String label) {
+            this(item, enchantmentId, enchantLevel, "", label);
+        }
+
         private String itemId() {
             return BuiltInRegistries.ITEM.getKey(item).toString();
         }

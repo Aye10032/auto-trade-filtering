@@ -15,19 +15,28 @@ public record TradeFilter(List<TradeTarget> targets) {
 
     /**
      * 单个交易目标：itemId 为物品注册名，enchantmentId 为空串表示不筛选附魔，
-     * enchantLevel 为 0 表示不限等级。
+     * enchantLevel 为 0 表示不限等级，potionId 为空串表示不筛选药水类型。
      */
-    public record TradeTarget(String itemId, String enchantmentId, int enchantLevel) {
+    public record TradeTarget(String itemId, String enchantmentId, int enchantLevel, String potionId) {
 
         public static final StreamCodec<ByteBuf, TradeTarget> STREAM_CODEC = StreamCodec.composite(
                 ByteBufCodecs.STRING_UTF8, TradeTarget::itemId,
                 ByteBufCodecs.STRING_UTF8, TradeTarget::enchantmentId,
                 ByteBufCodecs.VAR_INT, TradeTarget::enchantLevel,
+                ByteBufCodecs.STRING_UTF8, TradeTarget::potionId,
                 TradeTarget::new
         );
 
+        public TradeTarget(String itemId, String enchantmentId, int enchantLevel) {
+            this(itemId, enchantmentId, enchantLevel, "");
+        }
+
         public boolean hasEnchantmentFilter() {
             return !enchantmentId.isEmpty();
+        }
+
+        public boolean hasPotionFilter() {
+            return !potionId.isEmpty();
         }
     }
 

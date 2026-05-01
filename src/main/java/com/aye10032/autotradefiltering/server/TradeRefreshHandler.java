@@ -3,8 +3,10 @@ package com.aye10032.autotradefiltering.server;
 import com.aye10032.autotradefiltering.network.RefreshResultPayload;
 import com.aye10032.autotradefiltering.network.TradeFilter;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.item.alchemy.PotionContents;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
@@ -153,6 +155,8 @@ public class TradeRefreshHandler {
         String resultItemId = BuiltInRegistries.ITEM.getKey(result.getItem()).toString();
         if (!resultItemId.equals(target.itemId())) return false;
 
+        if (target.hasPotionFilter() && !matchesPotion(result, target.potionId())) return false;
+
         if (!target.hasEnchantmentFilter()) return true;
 
         ItemEnchantments enchantments = EnchantmentHelper.getEnchantmentsForCrafting(result);
@@ -165,6 +169,15 @@ public class TradeRefreshHandler {
             }
         }
         return false;
+    }
+
+    private static boolean matchesPotion(ItemStack result, String potionId) {
+        PotionContents contents = result.get(DataComponents.POTION_CONTENTS);
+        if (contents == null) return false;
+        return contents.potion()
+                .flatMap(holder -> holder.unwrapKey())
+                .map(key -> key.identifier().toString().equals(potionId))
+                .orElse(false);
     }
 
     private static void sendResult(ServerPlayer player, boolean success, int attempts, String message) {
