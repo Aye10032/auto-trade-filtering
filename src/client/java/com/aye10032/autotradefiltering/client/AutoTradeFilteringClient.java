@@ -19,6 +19,7 @@ public class AutoTradeFilteringClient implements ClientModInitializer {
 				context.client().execute(() -> showResultToast(payload))
 		);
 		LibrarianTradeOverlay.registerReceivers();
+		LibrarianTradeOverlayCommand.register();
 	}
 
 	private static void showResultToast(RefreshResultPayload payload) {

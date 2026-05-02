@@ -18,5 +18,8 @@
   "overlay.auto-trade-filtering.librarian_books": "Enchanted Books",
   "overlay.auto-trade-filtering.loading": "Loading trades...",
   "overlay.auto-trade-filtering.no_books": "No enchanted book trades",
-  "overlay.auto-trade-filtering.more": "+%s more"
+  "overlay.auto-trade-filtering.more": "+%s more",
+
+  "cmd.auto-trade-filtering.overlay.enabled": "ATF librarian trade overlay: enabled",
+  "cmd.auto-trade-filtering.overlay.disabled": "ATF librarian trade overlay: disabled"
 }

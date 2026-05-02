@@ -18,5 +18,8 @@
   "overlay.auto-trade-filtering.librarian_books": "附魔书交易",
   "overlay.auto-trade-filtering.loading": "正在读取交易...",
   "overlay.auto-trade-filtering.no_books": "没有附魔书交易",
-  "overlay.auto-trade-filtering.more": "还有 %s 项"
+  "overlay.auto-trade-filtering.more": "还有 %s 项",
+
+  "cmd.auto-trade-filtering.overlay.enabled": "ATF 图书管理员交易提示：已开启",
+  "cmd.auto-trade-filtering.overlay.disabled": "ATF 图书管理员交易提示：已关闭"
 }

@@ -32,6 +32,7 @@ public final class LibrarianTradeOverlay {
 
     private static final Map<UUID, CachedTrades> CACHE = new HashMap<>();
     private static final Map<UUID, Integer> LAST_REQUEST_TICKS = new HashMap<>();
+    private static boolean enabled = true;
 
     private LibrarianTradeOverlay() {
     }
@@ -43,6 +44,8 @@ public final class LibrarianTradeOverlay {
     }
 
     public static void tick() {
+        if (!enabled) return;
+
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) {
             return;
@@ -72,6 +75,8 @@ public final class LibrarianTradeOverlay {
     }
 
     private static List<Component> tradeNameTagLines(Entity entity) {
+        if (!enabled) return List.of();
+
         UUID uuid = entity.getUUID();
 
         CachedTrades cached = CACHE.get(uuid);
@@ -91,6 +96,8 @@ public final class LibrarianTradeOverlay {
     }
 
     public static void submitLabels(PoseStack poseStack, LevelRenderState levelRenderState, SubmitNodeCollector collector) {
+        if (!enabled) return;
+
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null || levelRenderState.cameraRenderState == null) return;
 
@@ -133,6 +140,18 @@ public final class LibrarianTradeOverlay {
 
     private static void receive(LibrarianTradesPayload payload) {
         CACHE.put(payload.villagerUuid(), new CachedTrades(List.copyOf(payload.entries()), currentTick()));
+    }
+
+    public static boolean isEnabled() {
+        return enabled;
+    }
+
+    public static void setEnabled(boolean enabled) {
+        LibrarianTradeOverlay.enabled = enabled;
+        if (!enabled) {
+            CACHE.clear();
+            LAST_REQUEST_TICKS.clear();
+        }
     }
 
     private static MutableComponent formatEntry(LibrarianTradesPayload.Entry entry) {
