@@ -212,6 +212,8 @@ public class TradeRefreshHandler {
     }
 
     private static boolean isProfessionLocked(Villager villager) {
+        if (villager.getVillagerXp() > 0) return true;
+
         MerchantOffers offers = villager.getOffers();
         if (offers == null || offers.isEmpty()) return false;
         for (MerchantOffer offer : offers) {

@@ -31,6 +31,8 @@ public abstract class MerchantScreenMixin extends Screen {
 
         // 仅对真实村民显示
         if (TradeFilterScreen.lastInteractedVillagerUUID == null) return;
+        if (TradeFilterScreen.hasUsedTrades(menu)) return;
+
         ResourceKey<VillagerProfession> profession = getLastInteractedVillagerProfession();
         if (profession == null) return;
 

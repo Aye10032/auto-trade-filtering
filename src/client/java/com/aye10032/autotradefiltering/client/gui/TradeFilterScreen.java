@@ -28,6 +28,7 @@ import net.minecraft.world.item.enchantment.Enchantable;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.item.enchantment.EnchantmentInstance;
+import net.minecraft.world.item.trading.MerchantOffers;
 import org.jspecify.annotations.NonNull;
 
 import java.util.ArrayList;
@@ -81,6 +82,17 @@ public class TradeFilterScreen extends Screen {
         this.menu = menu;
         this.parent = parent;
         this.profession = profession;
+    }
+
+    public static boolean hasUsedTrades(MerchantMenu menu) {
+        if (menu.getTraderXp() > 0) return true;
+
+        MerchantOffers offers = menu.getOffers();
+        if (offers == null || offers.isEmpty()) return false;
+        for (var offer : offers) {
+            if (offer.getUses() > 0) return true;
+        }
+        return false;
     }
 
     @Override
@@ -310,6 +322,10 @@ public class TradeFilterScreen extends Screen {
 
     private void sendRefreshRequest() {
         if (lastInteractedVillagerUUID == null) return;
+        if (hasUsedTrades(menu)) {
+            onClose();
+            return;
+        }
 
         int maxAttempts = 100;
         try { maxAttempts = Integer.parseInt(maxAttemptsBox.getValue()); } catch (NumberFormatException ignored) {}
