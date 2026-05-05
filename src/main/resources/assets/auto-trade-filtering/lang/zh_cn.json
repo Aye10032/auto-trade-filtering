@@ -4,8 +4,12 @@
   "gui.auto-trade-filtering.max_attempts": "最大次数:",
   "gui.auto-trade-filtering.start": "开始刷新",
   "gui.auto-trade-filtering.cancel": "取消",
+  "gui.auto-trade-filtering.clear": "清空",
   "gui.auto-trade-filtering.unsupported_profession": "该职业不支持筛选",
   "gui.auto-trade-filtering.selected_count": "已选 %s 个",
+  "gui.auto-trade-filtering.selected_summary": "当前已选: %s",
+  "gui.auto-trade-filtering.selected_none": "无",
+  "gui.auto-trade-filtering.selected_more": "还有 %s 项",
 
   "msg.auto-trade-filtering.success_title": "刷新成功",
   "msg.auto-trade-filtering.success": "已在第 %s 次刷出目标交易",

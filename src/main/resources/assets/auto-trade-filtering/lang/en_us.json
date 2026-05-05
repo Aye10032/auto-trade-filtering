@@ -4,8 +4,12 @@
   "gui.auto-trade-filtering.max_attempts": "Max Attempts:",
   "gui.auto-trade-filtering.start": "Start",
   "gui.auto-trade-filtering.cancel": "Cancel",
+  "gui.auto-trade-filtering.clear": "Clear",
   "gui.auto-trade-filtering.unsupported_profession": "This profession is not supported",
   "gui.auto-trade-filtering.selected_count": "Selected: %s",
+  "gui.auto-trade-filtering.selected_summary": "Selected: %s",
+  "gui.auto-trade-filtering.selected_none": "None",
+  "gui.auto-trade-filtering.selected_more": "+%s more",
 
   "msg.auto-trade-filtering.success_title": "Success",
   "msg.auto-trade-filtering.success": "Found target trade after %s attempt(s)",

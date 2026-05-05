@@ -36,13 +36,17 @@ public class TradeFilterScreen extends Screen {
     public static UUID lastInteractedVillagerUUID = null;
 
     private static final int PANEL_W = 320;
-    private static final int PANEL_H = 250;
+    private static final int PANEL_H = 294;
     private static final int TARGET_BTN_H = 20;
     private static final int TARGET_BTN_GAP = 2;
     private static final int MAX_VISIBLE_TARGETS = 7;
     private static final int DEFAULT_MAX_ATTEMPTS = 10_000;
     private static final int MAX_ATTEMPTS_LIMIT = 10_000;
     private static final int LIST_TOP_OFFSET = 38;
+    private static final int SELECTED_SUMMARY_GAP = 8;
+    private static final int SELECTED_SUMMARY_LINES = 3;
+    private static final int SELECTED_SUMMARY_LINE_H = 14;
+    private static final int SELECTED_SUMMARY_LINE_GAP = 1;
     private static final int SCROLLBAR_W = 6;
 
     private static ResourceKey<VillagerProfession> lastSelectionProfession = null;
@@ -57,8 +61,10 @@ public class TradeFilterScreen extends Screen {
 
     private EditBox maxAttemptsBox;
     private Button startButton;
+    private Button clearButton;
 
     private final Button[] targetButtons = new Button[MAX_VISIBLE_TARGETS];
+    private final Button[] selectedSummaryButtons = new Button[SELECTED_SUMMARY_LINES];
     private int scrollOffset = 0;
     private boolean draggingScrollbar = false;
 
@@ -87,9 +93,17 @@ public class TradeFilterScreen extends Screen {
                     .build());
         }
 
-        refreshTargetButtons();
+        for (int i = 0; i < SELECTED_SUMMARY_LINES; i++) {
+            selectedSummaryButtons[i] = addRenderableWidget(Button.builder(
+                    Component.literal(""),
+                    btn -> {})
+                    .bounds(left + 10, selectedSummaryTop(top) + i * (SELECTED_SUMMARY_LINE_H + SELECTED_SUMMARY_LINE_GAP),
+                            PANEL_W - 20, SELECTED_SUMMARY_LINE_H)
+                    .build());
+            selectedSummaryButtons[i].active = false;
+        }
 
-        int inputY = top + LIST_TOP_OFFSET + MAX_VISIBLE_TARGETS * (TARGET_BTN_H + TARGET_BTN_GAP) + 8;
+        int inputY = selectedSummaryTop(top) + selectedSummaryHeight() + 8;
         maxAttemptsBox = addRenderableWidget(new EditBox(
                 font, left + (PANEL_W - 54) / 2, inputY, 54, 16,
                 Component.translatable("gui.auto-trade-filtering.max_attempts")));
@@ -103,11 +117,20 @@ public class TradeFilterScreen extends Screen {
                 .build());
         startButton.active = !selectedIndices.isEmpty();
 
+        clearButton = addRenderableWidget(Button.builder(
+                Component.translatable("gui.auto-trade-filtering.clear"),
+                btn -> clearSelection())
+                .bounds(left + 10, top + 8, 48, 16)
+                .build());
+
         addRenderableWidget(Button.builder(
                 Component.translatable("gui.auto-trade-filtering.cancel"),
                 btn -> onClose())
                 .bounds(left + PANEL_W - 58, top + 8, 48, 16)
                 .build());
+
+        refreshTargetButtons();
+        refreshSelectedSummary();
     }
 
     private List<TargetEntry> buildTargets() {
@@ -228,6 +251,20 @@ public class TradeFilterScreen extends Screen {
 
         startButton.active = !selectedIndices.isEmpty();
         refreshTargetButtons();
+        refreshSelectedSummary();
+    }
+
+    private void clearSelection() {
+        selectedIndices.clear();
+        if (profession.equals(lastSelectionProfession)) {
+            lastSelectionProfession = null;
+            lastSelectedTargets = List.of();
+            lastMaxAttempts = DEFAULT_MAX_ATTEMPTS;
+        }
+
+        startButton.active = false;
+        refreshTargetButtons();
+        refreshSelectedSummary();
     }
 
     private void sendRefreshRequest() {
@@ -323,7 +360,7 @@ public class TradeFilterScreen extends Screen {
             graphics.fill(trackX + 1, thumbY, trackX + SCROLLBAR_W - 1, thumbY + thumbH, 0xFFAAAAAA);
         }
 
-        int inputY = top + LIST_TOP_OFFSET + MAX_VISIBLE_TARGETS * (TARGET_BTN_H + TARGET_BTN_GAP) + 8;
+        int inputY = selectedSummaryTop(top) + selectedSummaryHeight() + 8;
         graphics.text(font, Component.translatable("gui.auto-trade-filtering.max_attempts"),
                 left + 8, inputY + 4, 0xCCCCCC);
 
@@ -392,6 +429,15 @@ public class TradeFilterScreen extends Screen {
         return MAX_VISIBLE_TARGETS * TARGET_BTN_H + (MAX_VISIBLE_TARGETS - 1) * TARGET_BTN_GAP;
     }
 
+    private int selectedSummaryTop(int top) {
+        return listTop(top) + listHeight() + SELECTED_SUMMARY_GAP;
+    }
+
+    private int selectedSummaryHeight() {
+        return SELECTED_SUMMARY_LINES * SELECTED_SUMMARY_LINE_H
+                + (SELECTED_SUMMARY_LINES - 1) * SELECTED_SUMMARY_LINE_GAP;
+    }
+
     private int scrollbarX(int left) {
         return left + PANEL_W - 14;
     }
@@ -432,6 +478,53 @@ public class TradeFilterScreen extends Screen {
                 && target.enchantmentId().equals(savedTarget.enchantmentId())
                 && target.enchantLevel() == savedTarget.enchantLevel()
                 && target.potionId().equals(savedTarget.potionId());
+    }
+
+    private void refreshSelectedSummary() {
+        clearButton.active = !selectedIndices.isEmpty() || profession.equals(lastSelectionProfession);
+        int maxWidth = PANEL_W - 36;
+
+        if (selectedIndices.isEmpty()) {
+            selectedSummaryButtons[0].setMessage(Component.translatable("gui.auto-trade-filtering.selected_summary", 0));
+            selectedSummaryButtons[0].visible = true;
+            selectedSummaryButtons[1].setMessage(Component.translatable("gui.auto-trade-filtering.selected_none"));
+            selectedSummaryButtons[1].visible = true;
+            selectedSummaryButtons[2].visible = false;
+            return;
+        }
+
+        selectedSummaryButtons[0].setMessage(Component.translatable("gui.auto-trade-filtering.selected_summary", selectedIndices.size()));
+        selectedSummaryButtons[0].visible = true;
+
+        int labelsToShow = selectedIndices.size() > 2 ? 1 : 2;
+        int row = 1;
+        int shown = 0;
+        for (int idx : selectedIndices) {
+            if (idx >= targets.size()) continue;
+            if (shown >= labelsToShow) break;
+
+            selectedSummaryButtons[row].setMessage(Component.literal(trimToWidth(targets.get(idx).label(), maxWidth)));
+            selectedSummaryButtons[row].visible = true;
+            row++;
+            shown++;
+        }
+
+        int hidden = selectedIndices.size() - shown;
+        if (hidden > 0) {
+            selectedSummaryButtons[row].setMessage(Component.translatable("gui.auto-trade-filtering.selected_more", hidden));
+            selectedSummaryButtons[row].visible = true;
+            row++;
+        }
+
+        while (row < SELECTED_SUMMARY_LINES) {
+            selectedSummaryButtons[row].visible = false;
+            row++;
+        }
+    }
+
+    private String trimToWidth(String text, int maxWidth) {
+        if (font.width(text) <= maxWidth) return text;
+        return font.plainSubstrByWidth(text, maxWidth - font.width("...")) + "...";
     }
 
     private record TargetEntry(Item item, String enchantmentId, int enchantLevel, String potionId, String label) {
