@@ -9,11 +9,14 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.core.Holder;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.tags.EnchantmentTags;
 import net.minecraft.world.entity.npc.villager.VillagerProfession;
 import net.minecraft.world.inventory.MerchantMenu;
 import net.minecraft.world.item.Item;
@@ -21,7 +24,10 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.alchemy.Potion;
 import net.minecraft.world.item.alchemy.PotionContents;
+import net.minecraft.world.item.enchantment.Enchantable;
 import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.item.enchantment.EnchantmentInstance;
 import org.jspecify.annotations.NonNull;
 
 import java.util.ArrayList;
@@ -42,6 +48,8 @@ public class TradeFilterScreen extends Screen {
     private static final int MAX_VISIBLE_TARGETS = 7;
     private static final int DEFAULT_MAX_ATTEMPTS = 10_000;
     private static final int MAX_ATTEMPTS_LIMIT = 10_000;
+    private static final int TRADED_EQUIPMENT_MIN_ENCHANT_LEVEL = 5;
+    private static final int TRADED_EQUIPMENT_MAX_ENCHANT_LEVEL = 19;
     private static final int LIST_TOP_OFFSET = 38;
     private static final int SELECTED_SUMMARY_GAP = 8;
     private static final int SELECTED_SUMMARY_LINES = 3;
@@ -187,14 +195,47 @@ public class TradeFilterScreen extends Screen {
         if (registry == null) return;
         for (Item item : items) {
             ItemStack stack = new ItemStack(item);
-            for (var entry : registry.entrySet()) {
-                Enchantment enchantment = entry.getValue();
-                if (!enchantment.canEnchant(stack)) continue;
-                int level = enchantment.getMaxLevel();
-                result.add(new TargetEntry(item, entry.getKey().identifier().toString(), level,
-                        stack.getHoverName().getString() + " - " + enchantment.description().getString() + " " + level));
+            registry.listElements()
+                    .filter(holder -> holder.is(EnchantmentTags.ON_TRADED_EQUIPMENT))
+                    .forEach(holder -> addTradedEquipmentTarget(result, item, stack, holder));
+        }
+    }
+
+    private void addTradedEquipmentTarget(List<TargetEntry> result, Item item, ItemStack stack, Holder<Enchantment> holder) {
+        Enchantment enchantment = holder.value();
+        int level = maxTradedEquipmentEnchantLevel(stack, holder);
+        if (level <= 0) return;
+
+        holder.unwrapKey().ifPresent(key -> result.add(new TargetEntry(item, key.identifier().toString(), level,
+                stack.getHoverName().getString() + " - " + enchantment.description().getString() + " " + level)));
+    }
+
+    private int maxTradedEquipmentEnchantLevel(ItemStack stack, Holder<Enchantment> holder) {
+        int maxLevel = 0;
+        int minPower = minPossibleTradedEquipmentEnchantPower(stack);
+        int maxPower = maxPossibleTradedEquipmentEnchantPower(stack);
+        for (int power = minPower; power <= maxPower; power++) {
+            List<EnchantmentInstance> available = EnchantmentHelper.getAvailableEnchantmentResults(power, stack, List.of(holder).stream());
+            for (EnchantmentInstance instance : available) {
+                if (instance.enchantment().is(holder)) {
+                    maxLevel = Math.max(maxLevel, instance.level());
+                }
             }
         }
+        return maxLevel;
+    }
+
+    private int minPossibleTradedEquipmentEnchantPower(ItemStack stack) {
+        return Math.max(1, Math.round((TRADED_EQUIPMENT_MIN_ENCHANT_LEVEL + 1) * 0.85F));
+    }
+
+    private int maxPossibleTradedEquipmentEnchantPower(ItemStack stack) {
+        Enchantable enchantable = stack.get(DataComponents.ENCHANTABLE);
+        if (enchantable == null) return TRADED_EQUIPMENT_MAX_ENCHANT_LEVEL;
+
+        int bound = enchantable.value() / 4 + 1;
+        int preAdjustmentMax = TRADED_EQUIPMENT_MAX_ENCHANT_LEVEL + 1 + (bound - 1) * 2;
+        return Math.max(1, Math.round(preAdjustmentMax * 1.15F));
     }
 
     private void addColorBlockTargets(List<TargetEntry> result, List<Item> items) {
