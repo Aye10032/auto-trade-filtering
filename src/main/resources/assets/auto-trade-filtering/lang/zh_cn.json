@@ -5,6 +5,7 @@
   "gui.auto-trade-filtering.start": "开始刷新",
   "gui.auto-trade-filtering.cancel": "取消",
   "gui.auto-trade-filtering.unsupported_profession": "该职业不支持筛选",
+  "gui.auto-trade-filtering.selected_count": "已选 %s 个",
 
   "msg.auto-trade-filtering.success_title": "刷新成功",
   "msg.auto-trade-filtering.success": "已在第 %s 次刷出目标交易",

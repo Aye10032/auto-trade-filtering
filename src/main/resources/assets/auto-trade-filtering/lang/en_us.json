@@ -5,6 +5,7 @@
   "gui.auto-trade-filtering.start": "Start",
   "gui.auto-trade-filtering.cancel": "Cancel",
   "gui.auto-trade-filtering.unsupported_profession": "This profession is not supported",
+  "gui.auto-trade-filtering.selected_count": "Selected: %s",
 
   "msg.auto-trade-filtering.success_title": "Success",
   "msg.auto-trade-filtering.success": "Found target trade after %s attempt(s)",

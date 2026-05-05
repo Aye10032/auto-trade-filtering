@@ -40,10 +40,14 @@ public class TradeFilterScreen extends Screen {
     private static final int TARGET_BTN_H = 20;
     private static final int TARGET_BTN_GAP = 2;
     private static final int MAX_VISIBLE_TARGETS = 7;
-    private static final int MAX_SELECTIONS = 2;
+    private static final int DEFAULT_MAX_ATTEMPTS = 10_000;
     private static final int MAX_ATTEMPTS_LIMIT = 10_000;
     private static final int LIST_TOP_OFFSET = 38;
     private static final int SCROLLBAR_W = 6;
+
+    private static ResourceKey<VillagerProfession> lastSelectionProfession = null;
+    private static List<TradeFilter.TradeTarget> lastSelectedTargets = List.of();
+    private static int lastMaxAttempts = DEFAULT_MAX_ATTEMPTS;
 
     private final MerchantMenu menu;
     private final Screen parent;
@@ -69,6 +73,7 @@ public class TradeFilterScreen extends Screen {
     protected void init() {
         targets.clear();
         targets.addAll(buildTargets());
+        restoreLastSelection();
 
         int left = (width - PANEL_W) / 2;
         int top = (height - PANEL_H) / 2;
@@ -88,7 +93,7 @@ public class TradeFilterScreen extends Screen {
         maxAttemptsBox = addRenderableWidget(new EditBox(
                 font, left + (PANEL_W - 54) / 2, inputY, 54, 16,
                 Component.translatable("gui.auto-trade-filtering.max_attempts")));
-        maxAttemptsBox.setValue("1000");
+        maxAttemptsBox.setValue(String.valueOf(profession.equals(lastSelectionProfession) ? lastMaxAttempts : DEFAULT_MAX_ATTEMPTS));
         maxAttemptsBox.setMaxLength(5);
 
         startButton = addRenderableWidget(Button.builder(
@@ -96,7 +101,7 @@ public class TradeFilterScreen extends Screen {
                 btn -> sendRefreshRequest())
                 .bounds(left + (PANEL_W - 82) / 2, top + PANEL_H - 28, 82, 20)
                 .build());
-        startButton.active = false;
+        startButton.active = !selectedIndices.isEmpty();
 
         addRenderableWidget(Button.builder(
                 Component.translatable("gui.auto-trade-filtering.cancel"),
@@ -205,7 +210,7 @@ public class TradeFilterScreen extends Screen {
                 boolean selected = selectedIndices.contains(realIdx);
                 targetButtons[i].setMessage(Component.literal((selected ? "[✓] " : "[ ] ") + target.label()));
                 targetButtons[i].visible = true;
-                targetButtons[i].active = selected || selectedIndices.size() < MAX_SELECTIONS;
+                targetButtons[i].active = true;
             } else {
                 targetButtons[i].visible = false;
             }
@@ -217,7 +222,7 @@ public class TradeFilterScreen extends Screen {
 
         if (selectedIndices.contains(realIdx)) {
             selectedIndices.remove(realIdx);
-        } else if (selectedIndices.size() < MAX_SELECTIONS) {
+        } else {
             selectedIndices.add(realIdx);
         }
 
@@ -240,6 +245,10 @@ public class TradeFilterScreen extends Screen {
         }
 
         if (selectedTargets.isEmpty()) return;
+
+        lastSelectionProfession = profession;
+        lastSelectedTargets = List.copyOf(selectedTargets);
+        lastMaxAttempts = maxAttempts;
 
         ClientPlayNetworking.send(new RequestRefreshPayload(
                 lastInteractedVillagerUUID,
@@ -301,7 +310,7 @@ public class TradeFilterScreen extends Screen {
 
         String hint = targets.isEmpty()
                 ? Component.translatable("gui.auto-trade-filtering.unsupported_profession").getString()
-                : "（最多选 " + MAX_SELECTIONS + " 个，已选 " + selectedIndices.size() + "）";
+                : Component.translatable("gui.auto-trade-filtering.selected_count", selectedIndices.size()).getString();
         graphics.centeredText(font, Component.literal(hint), width / 2, top + 28, 0xAAAAAA);
 
         if (canScroll()) {
@@ -394,6 +403,35 @@ public class TradeFilterScreen extends Screen {
     private int scrollbarThumbY(int trackY, int trackH, int thumbH) {
         if (maxScrollOffset() == 0) return trackY;
         return trackY + (trackH - thumbH) * scrollOffset / maxScrollOffset();
+    }
+
+    private void restoreLastSelection() {
+        if (!selectedIndices.isEmpty()) {
+            scrollOffset = Math.min(scrollOffset, maxScrollOffset());
+            return;
+        }
+        if (!profession.equals(lastSelectionProfession)) return;
+
+        for (TradeFilter.TradeTarget savedTarget : lastSelectedTargets) {
+            for (int i = 0; i < targets.size(); i++) {
+                if (selectedIndices.contains(i)) continue;
+                if (targetMatchesSavedTarget(targets.get(i), savedTarget)) {
+                    selectedIndices.add(i);
+                    break;
+                }
+            }
+        }
+
+        if (!selectedIndices.isEmpty()) {
+            scrollOffset = Math.min(selectedIndices.iterator().next(), maxScrollOffset());
+        }
+    }
+
+    private boolean targetMatchesSavedTarget(TargetEntry target, TradeFilter.TradeTarget savedTarget) {
+        return target.itemId().equals(savedTarget.itemId())
+                && target.enchantmentId().equals(savedTarget.enchantmentId())
+                && target.enchantLevel() == savedTarget.enchantLevel()
+                && target.potionId().equals(savedTarget.potionId());
     }
 
     private record TargetEntry(Item item, String enchantmentId, int enchantLevel, String potionId, String label) {
