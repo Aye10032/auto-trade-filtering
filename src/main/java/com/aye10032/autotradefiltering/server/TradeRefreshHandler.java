@@ -31,7 +31,7 @@ import java.util.UUID;
 public class TradeRefreshHandler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger("AutoTradeFiltering");
-    private static final int MAX_ATTEMPTS_LIMIT = 10_000;
+    private static final int MAX_ATTEMPTS_LIMIT = 99_999;
     private static final double MAX_DISTANCE_SQ = 64.0;
     private static final String ENCHANTED_BOOK_ID = "minecraft:enchanted_book";
 

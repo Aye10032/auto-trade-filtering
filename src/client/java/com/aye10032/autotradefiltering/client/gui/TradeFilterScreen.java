@@ -48,7 +48,7 @@ public class TradeFilterScreen extends Screen {
     private static final int TARGET_BTN_GAP = 2;
     private static final int MAX_VISIBLE_TARGETS = 7;
     private static final int DEFAULT_MAX_ATTEMPTS = 10_000;
-    private static final int MAX_ATTEMPTS_LIMIT = 10_000;
+    private static final int MAX_ATTEMPTS_LIMIT = 99_999;
     private static final int TRADED_EQUIPMENT_MIN_ENCHANT_LEVEL = 5;
     private static final int TRADED_EQUIPMENT_MAX_ENCHANT_LEVEL = 19;
     private static final int LIST_TOP_OFFSET = 38;
@@ -334,7 +334,7 @@ public class TradeFilterScreen extends Screen {
             return;
         }
 
-        int maxAttempts = 100;
+        int maxAttempts = DEFAULT_MAX_ATTEMPTS;
         try { maxAttempts = Integer.parseInt(maxAttemptsBox.getValue()); } catch (NumberFormatException ignored) {}
         maxAttempts = Math.max(1, Math.min(MAX_ATTEMPTS_LIMIT, maxAttempts));
 
