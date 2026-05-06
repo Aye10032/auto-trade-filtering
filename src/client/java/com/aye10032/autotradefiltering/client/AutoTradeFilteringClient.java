@@ -18,6 +18,7 @@ public class AutoTradeFilteringClient implements ClientModInitializer {
 		ClientPlayNetworking.registerGlobalReceiver(RefreshResultPayload.TYPE, (payload, context) ->
 				context.client().execute(() -> showResultToast(payload))
 		);
+		FutureTradePreviewCache.registerReceiver();
 		LibrarianTradeOverlay.registerReceivers();
 		LibrarianTradeOverlayCommand.register();
 	}

@@ -84,6 +84,7 @@ public class TradeRefreshHandler {
                 LOGGER.info("[ATF] 第 {} 次刷新命中所有目标！当前等级 {} 条，完整职业池 {} 条", i, roll.visibleOffers().size(), roll.fullCareerOffers().size());
                 villager.setOffers(roll.visibleOffers());
                 ((FilteredVillager) villager).atf$setFutureTradeData(new FutureTradeData(roll.futureOffers()));
+                FutureTradePreviewHandler.send(player, villager);
                 sendResult(player, true, i, "success");
                 return;
             }
@@ -92,6 +93,7 @@ public class TradeRefreshHandler {
         }
 
         ((FilteredVillager) villager).atf$setFutureTradeData(null);
+        FutureTradePreviewHandler.send(player, villager);
         LOGGER.info("[ATF] 已达最大尝试次数 {}，未找到目标", limit);
         sendResult(player, false, limit, "max_attempts");
     }
