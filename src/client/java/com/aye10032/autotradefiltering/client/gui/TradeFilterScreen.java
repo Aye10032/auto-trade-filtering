@@ -57,6 +57,11 @@ public class TradeFilterScreen extends Screen {
     private static final int SELECTED_SUMMARY_LINE_H = 14;
     private static final int SELECTED_SUMMARY_LINE_GAP = 1;
     private static final int SCROLLBAR_W = 6;
+    private static final int NO_GROUP_COLOR = 0;
+    private static final int[] EQUIPMENT_GROUP_COLORS = {
+            0xFF4E6A89, 0xFF6C5A82, 0xFF5F7547, 0xFF8A6847,
+            0xFF4F7B75, 0xFF7B5959
+    };
 
     private static ResourceKey<VillagerProfession> lastSelectionProfession = null;
     private static List<TradeFilter.TradeTarget> lastSelectedTargets = List.of();
@@ -72,7 +77,7 @@ public class TradeFilterScreen extends Screen {
     private Button startButton;
     private Button clearButton;
 
-    private final Button[] targetButtons = new Button[MAX_VISIBLE_TARGETS];
+    private final ColoredTargetButton[] targetButtons = new ColoredTargetButton[MAX_VISIBLE_TARGETS];
     private final Button[] selectedSummaryButtons = new Button[SELECTED_SUMMARY_LINES];
     private int scrollOffset = 0;
     private boolean draggingScrollbar = false;
@@ -106,11 +111,9 @@ public class TradeFilterScreen extends Screen {
 
         for (int i = 0; i < MAX_VISIBLE_TARGETS; i++) {
             final int slotIdx = i;
-            targetButtons[i] = addRenderableWidget(Button.builder(
-                    Component.literal(""),
-                    btn -> toggleTarget(scrollOffset + slotIdx))
-                    .bounds(left + 10, top + LIST_TOP_OFFSET + i * (TARGET_BTN_H + TARGET_BTN_GAP), PANEL_W - 30, TARGET_BTN_H)
-                    .build());
+            targetButtons[i] = addRenderableWidget(new ColoredTargetButton(
+                    left + 10, top + LIST_TOP_OFFSET + i * (TARGET_BTN_H + TARGET_BTN_GAP), PANEL_W - 30, TARGET_BTN_H,
+                    btn -> toggleTarget(scrollOffset + slotIdx)));
         }
 
         for (int i = 0; i < SELECTED_SUMMARY_LINES; i++) {
@@ -205,20 +208,22 @@ public class TradeFilterScreen extends Screen {
     private void addEnchantedItemTargets(List<TargetEntry> result, List<Item> items) {
         Registry<Enchantment> registry = enchantmentRegistry();
         if (registry == null) return;
-        for (Item item : items) {
+        for (int i = 0; i < items.size(); i++) {
+            Item item = items.get(i);
             ItemStack stack = new ItemStack(item);
+            int groupColor = EQUIPMENT_GROUP_COLORS[i % EQUIPMENT_GROUP_COLORS.length];
             registry.listElements()
                     .filter(holder -> holder.is(EnchantmentTags.ON_TRADED_EQUIPMENT))
-                    .forEach(holder -> addTradedEquipmentTarget(result, item, stack, holder));
+                    .forEach(holder -> addTradedEquipmentTarget(result, item, stack, holder, groupColor));
         }
     }
 
-    private void addTradedEquipmentTarget(List<TargetEntry> result, Item item, ItemStack stack, Holder<Enchantment> holder) {
+    private void addTradedEquipmentTarget(List<TargetEntry> result, Item item, ItemStack stack, Holder<Enchantment> holder, int groupColor) {
         Enchantment enchantment = holder.value();
         int level = maxTradedEquipmentEnchantLevel(stack, holder);
         if (level <= 0) return;
 
-        holder.unwrapKey().ifPresent(key -> result.add(new TargetEntry(item, key.identifier().toString(), level,
+        holder.unwrapKey().ifPresent(key -> result.add(new TargetEntry(item, key.identifier().toString(), level, groupColor,
                 stack.getHoverName().getString() + " - " + enchantment.description().getString() + " " + level)));
     }
 
@@ -285,10 +290,12 @@ public class TradeFilterScreen extends Screen {
                 TargetEntry target = targets.get(realIdx);
                 boolean selected = selectedIndices.contains(realIdx);
                 targetButtons[i].setMessage(Component.literal((selected ? "[✓] " : "[ ] ") + target.label()));
+                targetButtons[i].setGroupColor(target.groupColor());
                 targetButtons[i].visible = true;
                 targetButtons[i].active = true;
             } else {
                 targetButtons[i].visible = false;
+                targetButtons[i].setGroupColor(NO_GROUP_COLOR);
             }
         }
     }
@@ -584,9 +591,48 @@ public class TradeFilterScreen extends Screen {
         return font.plainSubstrByWidth(text, maxWidth - font.width("...")) + "...";
     }
 
-    private record TargetEntry(Item item, String enchantmentId, int enchantLevel, String potionId, String label) {
+    private class ColoredTargetButton extends Button {
+        private int groupColor = NO_GROUP_COLOR;
+
+        private ColoredTargetButton(int x, int y, int width, int height, OnPress onPress) {
+            super(x, y, width, height, Component.literal(""), onPress, DEFAULT_NARRATION);
+        }
+
+        private void setGroupColor(int groupColor) {
+            this.groupColor = groupColor;
+        }
+
+        @Override
+        protected void extractContents(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
+            if (groupColor == NO_GROUP_COLOR) {
+                extractDefaultSprite(graphics);
+            } else {
+                int background = isHoveredOrFocused() ? brighten(groupColor) : groupColor;
+                graphics.fill(getX(), getY(), getRight(), getBottom(), background);
+                graphics.outline(getX(), getY(), getWidth(), getHeight(), isHoveredOrFocused() ? 0xFFFFFFFF : 0xFF111111);
+            }
+            extractDefaultLabel(graphics.textRendererForWidget(this, GuiGraphicsExtractor.HoveredTextEffects.NONE));
+        }
+    }
+
+    private static int brighten(int color) {
+        int r = Math.min(255, ((color >> 16) & 0xFF) + 28);
+        int g = Math.min(255, ((color >> 8) & 0xFF) + 28);
+        int b = Math.min(255, (color & 0xFF) + 28);
+        return (color & 0xFF000000) | (r << 16) | (g << 8) | b;
+    }
+
+    private record TargetEntry(Item item, String enchantmentId, int enchantLevel, String potionId, int groupColor, String label) {
         TargetEntry(Item item, String enchantmentId, int enchantLevel, String label) {
-            this(item, enchantmentId, enchantLevel, "", label);
+            this(item, enchantmentId, enchantLevel, "", NO_GROUP_COLOR, label);
+        }
+
+        TargetEntry(Item item, String enchantmentId, int enchantLevel, int groupColor, String label) {
+            this(item, enchantmentId, enchantLevel, "", groupColor, label);
+        }
+
+        TargetEntry(Item item, String enchantmentId, int enchantLevel, String potionId, String label) {
+            this(item, enchantmentId, enchantLevel, potionId, NO_GROUP_COLOR, label);
         }
 
         private String itemId() {
